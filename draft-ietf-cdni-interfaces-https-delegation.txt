@@ -2,12 +2,12 @@
 
 
 
-CDNI Working Group                                              F. Fieau
+CDNI Working Group                                         F. Fieau, Ed.
 Internet-Draft                                                E. Stephan
 Intended status: Standards Track                                  Orange
-Expires: 2 February 2023                                       S. Mishra
+Expires: 16 March 2023                                         S. Mishra
                                                                  Verizon
-                                                           1 August 2022
+                                                       12 September 2022
 
 
                   CDNI extensions for HTTPS delegation
@@ -15,11 +15,14 @@ Expires: 2 February 2023                                       S. Mishra
 
 Abstract
 
-   This document defines a new Footprint and Capabilities metadata
-   objects to support HTTPS delegation between two or more
-   interconnected CDNs.  Specifically, this document outlines CDNI
-   Metadata interface objects for delegation method as published in the
-   ACME-STAR document (RFC 9115).
+   This document defines metadata objects to support delegating the
+   delivery of HTTPS traffic between two or more interconnected CDNs.
+   Specifically, this document outlines CDNI Metadata interface objects
+   for HTTPS delegation based on the interfaces for obtaining delegated
+   certificates defined by RFC9115.  Using RFC9115-profiled ACME avoids
+   the need to share private cryptographic key material between the
+   involved entities, while also allowing the delegating CDN to remain
+   in full control of the delegation and revoke it at any time.
 
 About This Document
 
@@ -32,7 +35,8 @@ About This Document
    Discussion of this document takes place on the Content Delivery
    Networks Interconnection Working Group mailing list
    (mailto:cdni@ietf.org), which is archived at
-   https://mailarchive.ietf.org/arch/browse/cdni/.
+   https://mailarchive.ietf.org/arch/browse/cdni/.  Subscribe at
+   https://www.ietf.org/mailman/listinfo/cdni/.
 
    Source for this draft and an issue tracker can be found at
    https://github.com/TODO.
@@ -52,7 +56,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 2 February 2023.
+   This Internet-Draft will expire on 16 March 2023.
 
 Copyright Notice
 
@@ -72,13 +76,10 @@ Table of Contents
 
    1.   Introduction
      1.1.  Terminology
-   2.  Delegation metadata for CDNI FCI
-   3.   Delegation metadata for CDNI
-     3.1.  Usage example related to an HostMatch object
-     3.2.  AcmeStarDelegationMethod object
+   2.  Advertising Delegation Metadata for CDNI through FCI
+   3.   ACME Delegation Metadata for CDNI
    4.   IANA Considerations
      4.1.  CDNI MI AcmeStarDelegationMethod Payload Type
-     4.2.  CDNI FCI SupportedDelegationMethods Payload Type
    5.  Security considerations
    6.  References
      6.1.  Normative References
@@ -89,54 +90,45 @@ Table of Contents
 1.   Introduction
 
    Content delivery over HTTPS using one or more CDNs along the path
-   requires credential management.  This specifically applies when an
-   entity delegates delivery of encrypted content to another trusted
-   entity.
+   requires credential management specifically when DNS-based
+   redirection is used.  For example, an uCDN is delegating its
+   credentials to a dCDN for content delivery.  This specifically
+   applies when an entity delegates delivery of encrypted content to
+   another trusted entity.
 
-   [RFC9115] defines a mechanism where an upstream entity, that is,
-   holder of a X.509 certificate can give a temporary delegated
-   authority, via issuing a certificate to one or more downstream
-   entities for the purposes of delivering content on its behalf.
-   Furthermore, the upstream entity has the ability to extend the
-   duration of the certificate automatically and iteratively until it
-   allows the last renewal to end and therefore terminate the use of
-   certificate authority to the downstream entity.
-
-   More specifically, [RFC9115] defines a process where the upstream
-   Content Delivery Network (uCDN), the holder of the domain, generates
-   on-demand a X.509 certificate for the downstream CDN (dCDN).  The
-   certificate generation process ensures that the certified public key
-   corresponds to a private key controlled by the downstream CDN.
-   [RFC9115] follows [RFC8739] for Short-Term, Automatically Renewed
-   Certificate (STAR) in the Automated Certificate Management
-   Environment (ACME).
+   [RFC9115] defines a delegation method where the upstream Content
+   Delivery Network (uCDN), the holder of the domain, generates on-
+   demand an X.509 certificate for the downstream CDN (dCDN).  For
+   further details, please refer to Section 1 of [RFC9115] and
+   Section 5.1.2.1 of [RFC9115].
 
    This document defines CDNI Metadata to make use of HTTPS delegation
-   between an upstream CDN (uCDN) and a downstream CDN (dCDN) based on
-   mechanism specified in [RFC9115].  Furthermore, it includes a
-   proposal of IANA registry to enable adding of delegation methods.
+   between an uCDN and a dCDN based on the mechanism specified in
+   [RFC9115].  Furthermore, it includes an addition of a delegation
+   methods to the IANA registry.
 
    Section 1.1 defines terminology used in this document.  Section 2
-   presents delegation metadata for the FCI interface.  Section 4
+   presents delegation metadata for the FCI interface.  Section 3
    addresses the metadata for handling HTTPS delegation with the
-   Metadata Interface.  Section 5 addresses IANA registry for delegation
-   methods.  Section 6 covers the security considerations.
+   Metadata Interface.  Section 4 addresses IANA registry for delegation
+   methods.  Section 5 covers the security considerations.
 
 1.1.  Terminology
 
    This document uses terminology from CDNI framework documents such as:
    CDNI framework document [RFC7336], CDNI requirements [RFC7337] and
    CDNI interface specifications documents: CDNI Metadata interface
-   [RFC8006] and CDNI Footprint and capabilities [RFC8008].
+   [RFC8006] and CDNI Footprint and capabilities [RFC8008].  It also
+   uses terminology from Section 1.1 of [RFC8739].
 
-2.  Delegation metadata for CDNI FCI
+2.  Advertising Delegation Metadata for CDNI through FCI
 
    The Footprint and Capabilities interface as defined in [RFC8008],
-   allows a dCDN to send a FCI capability type object to a uCDN.  This
-   draft adds an object named FCI.SupportedDelegationMethods.
+   allows a dCDN to send a FCI capability type object to a uCDN.
 
-   This object shall allow a dCDN to advertise the capabilities
-   regarding the supported delegation methods and their configuration.
+   The FCI.Metadata object shall allow a dCDN to advertise the
+   capabilities regarding the supported delegation methods and their
+   configuration.
 
    The following is an example of the supported delegated methods
    capability object for a CDN supporting STAR delegation method.
@@ -144,10 +136,10 @@ Table of Contents
    {
      "capabilities": [
        {
-         "capability-type": "FCI.SupportedDelegationMethods",
+         "capability-type": "FCI.Metadata",
          "capability-value": {
-           "delegation-methods": [
-             "AcmeStarDelegationDelegationMethod",
+           "metadata": [
+             "AcmeStarDelegationMethod",
              "... Other supported delegation methods ..."
            ]
          },
@@ -158,65 +150,50 @@ Table of Contents
      ]
    }
 
-3.   Delegation metadata for CDNI
-
-   This section defines Delegation metadata using the current Metadata
-   interface model.  This allows bootstrapping delegation methods
-   between a uCDN and a delegate dCDN.
-
-3.1.  Usage example related to an HostMatch object
-
-   This section presents the use of CDNI Delegation metadata to apply to
-   an HostMatch object, as defined in [RFC8006] and as specified in the
-   following sections.
-
-   The existence of delegation method in the CDNI metadata Object shall
-   enable the use of this method, as chosen by the delegating entity.
-   In the case of an HostMatch object, the delegation method will be
-   activated for the set of Host defined in the HostMatch.  See
-   Section 3.2 for more details about delegation methods metadata
-   specification.
-
-   The HostMatch object can reference a host metadata that points at the
-   delegation information.  Delegation metadata are added to a Metadata
-   object.
-
-   Those "delegation" metadata can apply to other MI objects such as
-   PathMatch object metadata.
-
-   Below shows both HostMatch and its Metadata related to a host, for
-   example, here is a HostMatch object referencing "video.example.com":
-
-   HostMatch:
-   {
-     "host": "video.example.com",
-     "host-metadata": {
-       "type": "MI.HostMetadata",
-       "href": "https://metadata.ucdn.example/host1234"
-     }
-   }
-
-   Following the example above, the metadata is modeled for
-   ACMEStarDelegationMethod as follows:
-
-   {
-     "generic-metadata-value": {
-       "acme-delegations": [
-         "https://acme.ucdn.example/acme/delegation/ogfr8EcolOT",
-         "https://acme.ucdn.example/acme/delegation/wSi5Lbb61E4"
-       ]
-     }
-   }
-
-3.2.  AcmeStarDelegationMethod object
+3.   ACME Delegation Metadata for CDNI
 
    This section defines the AcmeStarDelegationMethod object which
    describes metadata related to the use of ACME/STAR API presented in
    [RFC9115].
 
+   This allows bootstrapping ACME delegation method between a uCDN and a
+   delegate dCDN.
+
    As expressed in [RFC9115], when an origin has set a delegation to a
-   specific domain (i.e. dCDN), the dCDN should present to the end-user
-   client, a short-term certificate bound to the master certificate.
+   specific domain (i.e., dCDN), the dCDN should present to the end-user
+   client a short-term certificate bound to the master certificate.
+
+                                                       .------------.
+                               video.cp.example ?     | .-----.      |
+                    .---------------------------------->|     |      |
+                   |                  (a)             | | DNS |  CP  |
+                   |    .-------------------------------+     |      |
+                   |   |   CNAME video.ucdn.example   | '-----'      |
+                   |   |                               '------------'
+                   |   |
+                   |   |
+       .-----------|---v--.                            .------------.
+      |    .-----.-+-----. |   video.ucdn.example ?   | .-----.      |
+      |    |     |       +----------------------------->|     |      |
+      | UA | TLS |  DNS  | |          (b)             | | DNS | uCDN |
+      |    |     |       |<-----------------------------+     |      |
+      |    '--+--'-----+-' | CNAME video.dcdn.example | '-----'      |
+       '------|----^---|--'                            '------------'
+              |    |   |
+              |    |   |
+              |    |   |                               .------------.
+              |    |   |      video.dcdn.example ?    | .-----.      |
+              |    |    '------------------------------>|     |      |
+              |    |                  (c)             | | DNS |      |
+              |     '-----------------------------------+     |      |
+              |                   A 192.0.2.1         | +-----+ dCDN |
+              |                                       | |     |      |
+               '--------------------------------------->| TLS |      |
+                           SNI: video.cp.example      | |     |      |
+                                                      | '-----'      |
+                                                       '------------'
+
+   TO BE REMOVED:
 
 dCDN                  uCDN             Content Provider           CA
  |              ACME/STAR proxy        ACME/STAR client    ACME/STAR srv
@@ -257,21 +234,36 @@ dCDN                  uCDN             Content Provider           CA
 
    *  Mandatory-to-Specify: Yes
 
+   Below shows both HostMatch and its Metadata related to a host, for
+   example, here is a HostMatch object referencing "video.example.com"
+   and a list of 2 acme-delegation objects.
+
+   Following the example above, the metadata is modeled for
+   ACMEStarDelegationMethod as follows:
+
+   {
+     "generic-metadata-type": "MI.AcmeStarDelegationMethod",
+     "generic-metadata-value": {
+       "acme-delegations": [
+         "https://acme.ucdn.example/acme/delegation/ogfr8EcolOT",
+         "https://acme.ucdn.example/acme/delegation/wSi5Lbb61E4"
+       ]
+     }
+   }
+
 4.   IANA Considerations
 
    This document requests the registration of the following entries
    under the "CDNI Payload Types" registry hosted by IANA regarding
    "CDNI delegation":
 
-            +================================+===============+
-            | Payload Type                   | Specification |
-            +================================+===============+
-            | MI.AcmeStarDelegationMethod    | RFCthis       |
-            +--------------------------------+---------------+
-            | FCI.SupportedDelegationMethods | RFCthis       |
-            +--------------------------------+---------------+
+              +=============================+===============+
+              | Payload Type                | Specification |
+              +=============================+===============+
+              | MI.AcmeStarDelegationMethod | RFCthis       |
+              +-----------------------------+---------------+
 
-                                 Table 1
+                                  Table 1
 
 
    // RFC Editor: please replace RFCthis with the RFC number of this RFC
@@ -285,17 +277,7 @@ dCDN                  uCDN             Content Provider           CA
 
    Interface:  MI
 
-   Encoding:  See Section 3.2
-
-4.2.  CDNI FCI SupportedDelegationMethods Payload Type
-
-   Purpose:  The purpose of this Payload Type is to distinguish
-      SupportedDelegationMethods FCI objects (and any associated
-      capability advertisement)
-
-   Interface:  FCI
-
-   Encoding:  See Section 2
+   Encoding:  See Section 3
 
 5.  Security considerations
 
@@ -304,6 +286,11 @@ dCDN                  uCDN             Content Provider           CA
    Certificate Management Environment (ACME) Profile for Generating
    Delegated Certificates [RFC9115]; the CDNI Metadata [RFC8006] and
    CDNI Footprint and Capabilities [RFC8008].
+
+   The delegation objects properties such as the list of delegation
+   objects mentioned in Section 3are critical.  They should be protected
+   by the proper/mandated encryption and authentication.  Please refer
+   to Sections 7.1, 7.2 and 7.4 of [RFC9115].
 
 6.  References
 
@@ -351,7 +338,7 @@ Acknowledgments
 
 Authors' Addresses
 
-   Frédéric Fieau
+   Frédéric Fieau (editor)
    Orange
    40-48, avenue de la Republique
    92320 Chatillon
